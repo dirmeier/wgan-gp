@@ -15,12 +15,12 @@ from jax.experimental import mesh_utils
 from jax.lib import xla_bridge
 from ml_collections import config_flags
 
-from experiments.cifar10.checkpointer import (
+from checkpointer import (
     get_checkpointer_fns,
     get_latest_train_state,
     get_optimizer,
 )
-from experiments.cifar10.models import make_model
+from models import make_model
 from wgan.loss import WGANGP, WGANGPConfig
 
 FLAGS = flags.FLAGS
