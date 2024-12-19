@@ -40,12 +40,6 @@ def _crop_resize(image, resolution):
 
 
 def _as_batched_numpy_iter(rng_key, itr, config):
-    def _process_flowers(batch):
-        img = tf.cast(batch["image"], tf.float32) / 255.0
-        img = _crop_resize(img, config.data.image_size)
-        img = 2.0 * img - 1.0
-        return {"image": img}
-
     def _process_cifar(batch):
         img = tf.cast(batch["image"], tf.float32) / 255.0
         img = 2.0 * img - 1.0
@@ -53,7 +47,7 @@ def _as_batched_numpy_iter(rng_key, itr, config):
 
     def _process_mnist(batch):
         img = tf.cast(batch["image"], tf.float32) / 255.0
-        img = _crop_resize(img, config.data.image_size)
+        img = _crop_resize(img, config.data.shape[0])
         img = 2.0 * img - 1.0
         return {"image": img, "label": batch["label"]}
 
@@ -62,15 +56,14 @@ def _as_batched_numpy_iter(rng_key, itr, config):
         process_fn = _process_cifar
     elif config.data.dataset == "mnist":
         process_fn = _process_mnist
-    elif config.data.dataset == "oxford_flowers102":
-        process_fn = _process_flowers
     else:
         raise ValueError("data set not found")
 
     max_int32 = jnp.iinfo(jnp.int32).max
     seed = jr.randint(rng_key, shape=(), minval=0, maxval=max_int32)
     return (
-        itr.repeat()
+        itr
+        .repeat()
         .shuffle(
             config.training.buffer_size,
             reshuffle_each_iteration=config.training.do_reshuffle,

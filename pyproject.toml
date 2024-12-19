@@ -16,12 +16,11 @@ classifiers = [
 ]
 requires-python = ">=3.11"
 dependencies = [
-    "jax>=0.4.37",
+    "jax>=0.4.38",
     "ml-collections>=1.0.0",
     "optax>=0.2.4",
     "orbax>=0.1.9",
-    "tfds>=0.3",
-    "flax>=0.10.2",
+    "flax>=0.10.0",
     "tensorflow>=2.18.0",
     "tensorflow-datasets>=4.9.7",
 ]
@@ -46,7 +45,6 @@ dev-dependencies = [
 skips = ["B101"]
 
 [tool.ruff]
-line-length = 80
 exclude = ["*_test.py", "docs/**", "experiments/**"]
 
 [tool.ruff.lint]

@@ -1,7 +1,6 @@
 import dataclasses
 from functools import partial
 
-import jax
 import numpy as np
 from flax import nnx
 from jax import numpy as jnp
@@ -10,7 +9,7 @@ from jax import random as jr
 
 @dataclasses.dataclass
 class WGANGPConfig:
-    n_update_generator: int = 1
+    n_update_generator: int = 5
     lamb: float = 10
 
 
@@ -23,7 +22,7 @@ class WGANGP:
             preds = critic_fn(synthetic_data)
             return -jnp.mean(preds)
 
-        @partial(jax.vmap, in_axes=(None, 0, 0))
+        @partial(nnx.vmap, in_axes=(None, 0, 0))
         @partial(nnx.grad, argnums=1)
         def _critic_forward(model_fn, inputs, context):
             value = model_fn(inputs[None], context=None)
@@ -39,9 +38,7 @@ class WGANGP:
 
             sample_key, rng_key = jr.split(rng_key)
             new_shape = tuple(np.ones(inputs.ndim - 1, dtype=np.int32).tolist())
-            epsilon = jr.uniform(
-                sample_key, shape=(inputs.shape[0], *new_shape)
-            )
+            epsilon = jr.uniform(sample_key, shape=(inputs.shape[0], *new_shape))
             data_mix = inputs * epsilon + synthetic_data * (1 - epsilon)
 
             gradients = _critic_forward(critic_fn, data_mix, context)
@@ -56,7 +53,7 @@ class WGANGP:
             )
             return loss
 
-        @partial(nnx.jit, static_argnames=["step"])
+        @nnx.jit
         def step_fn(
             rng_key,
             model_fns,
@@ -74,13 +71,11 @@ class WGANGP:
             critic_fn.train()
             generator_fn.eval()
             grad_fn = nnx.value_and_grad(critic_loss_fn)
-            loss_c, grads = grad_fn(
-                critic_fn, generator_fn, grad_key, inputs, context
-            )
+            loss_c, grads = grad_fn(critic_fn, generator_fn, grad_key, inputs, context)
             c_optimizer.update(grads)
 
             loss_g = None
-            if step % config.n_update_generator == 0:
+            if step is not None:
                 grad_key, rng_key = jr.split(rng_key)
                 generator_fn.train()
                 critic_fn.eval()
@@ -97,6 +92,8 @@ class WGANGP:
         def eval_fn(rng_key, model_fns, inputs, context, metrics, **kwargs):
             generator_fn, critic_fn = model_fns
             loss_c_key, loss_g_key = jr.split(rng_key)
+            critic_fn.eval()
+            generator_fn.eval()
             loss_c = critic_loss_fn(
                 critic_fn, generator_fn, loss_c_key, inputs, context
             )
