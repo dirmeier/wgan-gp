@@ -3,39 +3,75 @@ from functools import partial
 
 import jax
 import numpy as np
-from flax import nnx
+from flax import linen as nn
 from jax import numpy as jnp
 from jax import random as jr
 
 
 @dataclasses.dataclass
 class WGANGPConfig:
-    n_update_generator: int = 1
+    n_update_generator: int = 5
     lamb: float = 10
 
 
 class WGANGP:
-    def __new__(cls, config: WGANGPConfig):
+    def __new__(cls, generator_fn, critic_fn, config: WGANGPConfig):
         def generator_loss_fn(
-            generator_fn, critic_fn, rng_key, inputs, context=None, **kwargs
+            params, generator_state, critic_state, rng_key, inputs, context, is_training
         ):
-            synthetic_data = generator_fn((inputs.shape[0],), context=context)
-            preds = critic_fn(synthetic_data)
+            synthetic_data = generator_fn(
+                variables={"params": params},
+                rngs={"sample": rng_key},
+                sample_shape=(inputs.shape[0],),
+                context=context,
+                is_training=is_training
+            )
+            preds = critic_fn(
+                variables={"params": critic_state.params},
+                rngs=None,
+                inputs=synthetic_data,
+                context=context,
+                is_training=False
+            )
             return -jnp.mean(preds)
 
-        @partial(jax.vmap, in_axes=(None, 0, 0))
-        @partial(nnx.grad, argnums=1)
-        def _critic_forward(model_fn, inputs, context):
-            value = model_fn(inputs[None], context=None)
+        @partial(jax.vmap, in_axes=(None, None, 0, 0))
+        @partial(jax.grad, argnums=2)
+        def _critic_forward(params, critic_state, inputs, context):
+            value = critic_fn(
+                variables={"params": params},
+                rngs=None,
+                inputs=inputs[None],
+                context=None,
+                is_training=True
+            )
             return value[0, 0]
 
         def critic_loss_fn(
-            critic_fn, generator_fn, rng_key, inputs, context=None, **kwargs
+            params, critic_state, generator_state, rng_key, inputs, context, is_training
         ):
             sample_key, rng_key = jr.split(rng_key)
-            synthetic_data = generator_fn((inputs.shape[0],), context=context)
-            preds_synthetic = critic_fn(synthetic_data, context=context)
-            preds_inputs = critic_fn(inputs, context=context)
+            synthetic_data = generator_fn(
+                variables={"params": generator_state.params},
+                rngs={"sample": rng_key},
+                sample_shape=(inputs.shape[0],),
+                context=context,
+                is_training=False
+            )
+            preds_synthetic = critic_fn(
+                variables={"params": params},
+                rngs=None,
+                inputs=synthetic_data,
+                context=context,
+                is_training=True
+            )
+            preds_inputs = critic_fn(
+                variables={"params": params},
+                rngs=None,
+                inputs=inputs,
+                context=context,
+                is_training=True
+            )
 
             sample_key, rng_key = jr.split(rng_key)
             new_shape = tuple(np.ones(inputs.ndim - 1, dtype=np.int32).tolist())
@@ -44,7 +80,7 @@ class WGANGP:
             )
             data_mix = inputs * epsilon + synthetic_data * (1 - epsilon)
 
-            gradients = _critic_forward(critic_fn, data_mix, context)
+            gradients = _critic_forward(critic_state.params, critic_state, data_mix, context)
             gradients = gradients.reshape((gradients.shape[0], -1))
             grad_norm = jnp.linalg.norm(gradients, axis=1)
             grad_penalty = ((grad_norm - 1) ** 2).mean()
@@ -56,55 +92,47 @@ class WGANGP:
             )
             return loss
 
-        @partial(nnx.jit, static_argnames=["step"])
         def step_fn(
             rng_key,
-            model_fns,
-            optimizer_fns,
+            critic_state,
+            generator_state,
             step,
             inputs,
             context,
-            metrics,
-            **kwargs,
         ):
-            generator_fn, critic_fn = model_fns
-            g_optimizer, c_optimizer = optimizer_fns
-
             grad_key, rng_key = jr.split(rng_key)
-            critic_fn.train()
-            generator_fn.eval()
-            grad_fn = nnx.value_and_grad(critic_loss_fn)
+            grad_fn = jax.value_and_grad(critic_loss_fn)
             loss_c, grads = grad_fn(
-                critic_fn, generator_fn, grad_key, inputs, context
+                critic_state.params, critic_state, generator_state, grad_key, inputs, context, True
             )
-            c_optimizer.update(grads)
+            loss_c = jax.lax.pmean(loss_c, axis_name="batch")
+            grads = jax.lax.pmean(grads, axis_name="batch")
+            new_critic_state = critic_state.apply_gradients(grads=grads)
 
             loss_g = None
-            if step % config.n_update_generator == 0:
+            new_generator_state = generator_state
+            if step is not None:
                 grad_key, rng_key = jr.split(rng_key)
-                generator_fn.train()
-                critic_fn.eval()
-                grad_fn = nnx.value_and_grad(generator_loss_fn)
+                grad_fn = jax.value_and_grad(generator_loss_fn)
                 loss_g, grads = grad_fn(
-                    generator_fn, critic_fn, grad_key, inputs, context
+                    generator_state.params, generator_state, critic_state, grad_key, inputs, context, True
                 )
-                g_optimizer.update(grads)
-                metrics.update(critic_loss=loss_c, generator_loss=loss_g)
+                loss_g = jax.lax.pmean(loss_g, axis_name="batch")
+                grads = jax.lax.pmean(grads, axis_name="batch")
+                new_generator_state = generator_state.apply_gradients(grads=grads)
 
-            return {"loss_c": loss_c, "loss_g": loss_g}
+            return {"critic_loss": loss_c, "generator_loss": loss_g}, (new_critic_state, new_generator_state)
 
-        @nnx.jit
-        def eval_fn(rng_key, model_fns, inputs, context, metrics, **kwargs):
-            generator_fn, critic_fn = model_fns
+        @jax.jit
+        def eval_fn(rng_key,     critic_state, generator_state, inputs, context):
             loss_c_key, loss_g_key = jr.split(rng_key)
             loss_c = critic_loss_fn(
-                critic_fn, generator_fn, loss_c_key, inputs, context
+                critic_state.params, critic_state, generator_state, loss_c_key, inputs, context, False
             )
             loss_g = generator_loss_fn(
-                generator_fn, critic_fn, loss_g_key, inputs, context
+                generator_state.params, generator_state, critic_state, loss_g_key, inputs, context, False
             )
-            metrics.update(critic_loss=loss_c, generator_loss=loss_g)
 
-            return {"loss_c": loss_c, "loss_g": loss_g}
+            return {"critic_loss": loss_c, "generator_loss": loss_g}
 
         return step_fn, eval_fn

@@ -21,6 +21,7 @@ def get_config():
     )
     config.training = new_dict(
         n_steps=500_000,
+        n_update_generator=5,
         batch_size=512,
         buffer_size=512 * 10,
         prefetch_size=512 * 2,
@@ -30,8 +31,7 @@ def get_config():
             save_interval_steps=1,
         ),
         n_eval_frequency=10_000,
-        n_checkpoint_frequency=30_000,
-        n_eval_batches=10,
+        n_eval_batches=20,
         n_sampling_frequency=50_000,
     )
 
@@ -39,14 +39,16 @@ def get_config():
         name="adam",
         params=new_dict(
             learning_rate=0.0002,
+            b1=0.5,
+            b2=0.999,
             weight_decay=1e-6,
-            do_warmup=True,
+            do_warmup=False,
             warmup_steps=1_000,
-            do_decay=True,
+            do_decay=False,
             decay_steps=500_000,
             end_learning_rate=1e-6,
             init_learning_rate=1e-8,
-            do_gradient_clipping=True,
+            do_gradient_clipping=False,
             gradient_clipping=1.0,
         ),
     )

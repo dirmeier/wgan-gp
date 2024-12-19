@@ -19,7 +19,7 @@ dependencies = [
     "jax>=0.4.25",
     "ml-collections>=1.0.0",
     "optax>=0.2.4",
-    "orbax>=0.1.9",    
+    "orbax>=0.1.9",
     "flax>=0.8.0",
     "tensorflow>=2.18.0",
     "tensorflow-datasets>=4.9.7",
@@ -45,7 +45,6 @@ dev-dependencies = [
 skips = ["B101"]
 
 [tool.ruff]
-line-length = 80
 exclude = ["*_test.py", "docs/**", "experiments/**"]
 
 [tool.ruff.lint]
