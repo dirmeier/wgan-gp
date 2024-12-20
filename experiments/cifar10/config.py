@@ -10,8 +10,9 @@ def get_config():
     config.rng_key = 1
 
     config.nn = new_dict(
-        dlatent=64,
-        dhid=64,
+        dlatent=512,
+        dchan=512,
+        base_resolution=(4, 4),
     )
     config.data = new_dict(
         dataset="cifar10",
@@ -51,7 +52,7 @@ def get_config():
             do_gradient_clipping=True,
             gradient_clipping=1.0,
         ),
-        
+
     )
 
     return config
