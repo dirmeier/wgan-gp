@@ -8,7 +8,6 @@ import numpy as np
 import wandb
 from absl import app, flags, logging
 from flax import jax_utils
-from flax import nnx
 from flax.training import common_utils
 from jax import numpy as jnp
 from jax import random as jr
@@ -74,12 +73,8 @@ def init_generator(rng_key, model, config):
 def train(
     rng_key, models, matching_fns, config, train_iter, val_iter, model_id
 ):
-    init_key, rng_key = jr.split(rng_key)
-    # mngr, ckpt_save_fn = get_checkpointer_fns(
-    #     os.path.join(FLAGS.workdir, "checkpoints", model_id),
-    #     config.training.checkpoints,
-    # )
-    # step and eval fns, and generator and discriminator
+    init_key, rng_key = jr.split(rng_key)    
+    
     step_fn, eval_fn = matching_fns
     generator_fn, critic_fn = models
 
@@ -121,8 +116,7 @@ def train(
             pbatch["image"],
             pbatch["label"],
         )
-        if do_generator_update:
-            train_metrics.append(metrics)
+        if do_generator_update: train_metrics.append(metrics)
         is_first_or_last_step = step == config.training.n_steps or step == 1
         if (
             step % config.training.n_eval_frequency == 0
@@ -146,7 +140,7 @@ def train(
             if jax.process_index() == 0:
                 logging.info(
                     f"loss at step {step}: "
-                    f"{summary['train/critic_loss']}/{summary['train/generator_loss']}"
+                    f"{summary['train/critic_loss']}/{summary['train/generator_loss']}/"
                     f"{summary['val/critic_loss']}/{summary['val/generator_loss']}"
                 )
             if FLAGS.usewand and jax.process_index() == 0:
@@ -158,7 +152,7 @@ def train(
             log_images(
                 sample_key,
                 jax_utils.unreplicate(pgenerator_state),
-                cstep,
+                step,
                 model_id,
             )
     logging.info("finished training")
@@ -199,7 +193,7 @@ def log_images(rng_key, generator_state, step, model_id):
     batch_size = 64
     n_samples = batch_size * 6
 
-    @nnx.jit
+    @jax.jit
     def sample(rng_key, context):
         samples = generator_state.apply_fn(
             variables={"params": generator_state.params},

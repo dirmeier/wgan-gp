@@ -10,7 +10,7 @@ def get_config():
     config.rng_key = 1
 
     config.nn = new_dict(
-        dlatent=128,
+        dlatent=64,
         dhid=64,
     )
     config.data = new_dict(
@@ -22,23 +22,23 @@ def get_config():
     config.training = new_dict(
         n_steps=500_000,
         n_update_generator=5,
-        batch_size=512,
-        buffer_size=512 * 10,
-        prefetch_size=512 * 2,
+        batch_size=64,
+        buffer_size=64 * 10,
+        prefetch_size=64 * 2,
         do_reshuffle=True,
         checkpoints=new_dict(
             max_to_keep=10,
             save_interval_steps=1,
         ),
-        n_eval_frequency=10_000,
+        n_eval_frequency=5_000,
         n_eval_batches=20,
-        n_sampling_frequency=50_000,
+        n_sampling_frequency=20_000,
     )
 
     config.optimizer = new_dict(
         name="adam",
         params=new_dict(
-            learning_rate=0.0002,
+            learning_rate=0.0001,
             b1=0.5,
             b2=0.999,
             weight_decay=1e-6,
@@ -48,9 +48,10 @@ def get_config():
             decay_steps=500_000,
             end_learning_rate=1e-6,
             init_learning_rate=1e-8,
-            do_gradient_clipping=False,
+            do_gradient_clipping=True,
             gradient_clipping=1.0,
         ),
+        
     )
 
     return config

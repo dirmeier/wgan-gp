@@ -31,7 +31,7 @@ class WGANGP:
                 rngs=None,
                 inputs=synthetic_data,
                 context=context,
-                is_training=False
+                is_training=is_training
             )
             return -jnp.mean(preds)
 
@@ -56,21 +56,21 @@ class WGANGP:
                 rngs={"sample": rng_key},
                 sample_shape=(inputs.shape[0],),
                 context=context,
-                is_training=False
+                is_training=is_training
             )
             preds_synthetic = critic_fn(
                 variables={"params": params},
                 rngs=None,
                 inputs=synthetic_data,
                 context=context,
-                is_training=True
+                is_training=is_training
             )
             preds_inputs = critic_fn(
                 variables={"params": params},
                 rngs=None,
                 inputs=inputs,
                 context=context,
-                is_training=True
+                is_training=is_training
             )
 
             sample_key, rng_key = jr.split(rng_key)
@@ -80,7 +80,7 @@ class WGANGP:
             )
             data_mix = inputs * epsilon + synthetic_data * (1 - epsilon)
 
-            gradients = _critic_forward(critic_state.params, critic_state, data_mix, context)
+            gradients = _critic_forward(params, critic_state, data_mix, context)
             gradients = gradients.reshape((gradients.shape[0], -1))
             grad_norm = jnp.linalg.norm(gradients, axis=1)
             grad_penalty = ((grad_norm - 1) ** 2).mean()

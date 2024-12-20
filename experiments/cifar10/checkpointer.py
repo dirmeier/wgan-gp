@@ -42,7 +42,7 @@ def get_optimizer(config):
     elif config.name == "radam":
         tx = optax.radam(lr)
     else:
-        tx = optax.adam(lr)
+        tx = optax.adam(lr, b1=config.params.b1, b2=config.params.b2)
 
     if config.params.do_gradient_clipping:
         tx = optax.chain(
