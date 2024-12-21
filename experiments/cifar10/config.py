@@ -10,7 +10,7 @@ def get_config():
     config.rng_key = 1
 
     config.nn = new_dict(
-        dlatent=512,
+        dlatent=64,
         dchan=512,
         base_resolution=(4, 4),
     )

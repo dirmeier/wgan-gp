@@ -103,23 +103,23 @@ class Generator(nn.Module):
         )
         self.model = nn.Sequential([
             nn.Dense(self.base_resolution[0] * self.base_resolution[1] * self.dchan),
-            nn.leaky_relu,
+            nn.relu,
             lambda x: x.reshape((-1, *self.base_resolution, self.dchan)),
             #
-            nn.GroupNorm(32),
+            nn.LayerNorm(),
             _upsample,
             conv(self.dchan),
-            nn.leaky_relu,
+            nn.relu,
             #
-            nn.GroupNorm(32),
+            nn.LayerNorm(),
             _upsample,
             conv(self.dchan),
-            nn.leaky_relu,
+            nn.relu,
             #
-            nn.GroupNorm(32),
+            nn.LayerNorm(),
             _upsample,
             conv(self.dchan),
-            nn.leaky_relu,
+            nn.relu,
             #
             nn.Conv(self.shape[-1], (1, 1), (1, 1), padding="SAME"),
             nn.tanh
@@ -156,17 +156,17 @@ class Critic(nn.Module):
             nn.Conv(self.dchan, (1, 1), (1, 1), padding="SAME"),
             #
             _downsample,
-            nn.GroupNorm(32),
+            nn.LayerNorm(),
             conv(self.dchan),
             nn.leaky_relu,
             #
             _downsample,
-            nn.GroupNorm(32),
+            nn.LayerNorm(),
             conv(self.dchan),
             nn.leaky_relu,
             #
             _downsample,
-            nn.GroupNorm(32),
+            nn.LayerNorm(),
             conv(self.dchan),
             nn.leaky_relu,
             #
