@@ -38,7 +38,9 @@ class WGANGP:
 
             sample_key, rng_key = jr.split(rng_key)
             new_shape = tuple(np.ones(inputs.ndim - 1, dtype=np.int32).tolist())
-            epsilon = jr.uniform(sample_key, shape=(inputs.shape[0], *new_shape))
+            epsilon = jr.uniform(
+                sample_key, shape=(inputs.shape[0], *new_shape)
+            )
             data_mix = inputs * epsilon + synthetic_data * (1 - epsilon)
 
             gradients = _critic_forward(critic_fn, data_mix, context)
@@ -71,7 +73,9 @@ class WGANGP:
             critic_fn.train()
             generator_fn.eval()
             grad_fn = nnx.value_and_grad(critic_loss_fn)
-            loss_c, grads = grad_fn(critic_fn, generator_fn, grad_key, inputs, context)
+            loss_c, grads = grad_fn(
+                critic_fn, generator_fn, grad_key, inputs, context
+            )
             c_optimizer.update(grads)
 
             loss_g = None

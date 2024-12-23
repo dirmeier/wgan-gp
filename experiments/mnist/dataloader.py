@@ -62,8 +62,7 @@ def _as_batched_numpy_iter(rng_key, itr, config):
     max_int32 = jnp.iinfo(jnp.int32).max
     seed = jr.randint(rng_key, shape=(), minval=0, maxval=max_int32)
     return (
-        itr
-        .repeat()
+        itr.repeat()
         .shuffle(
             config.training.buffer_size,
             reshuffle_each_iteration=config.training.do_reshuffle,

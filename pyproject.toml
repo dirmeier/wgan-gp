@@ -45,6 +45,7 @@ dev-dependencies = [
 skips = ["B101"]
 
 [tool.ruff]
+line-length = 80
 exclude = ["*_test.py", "docs/**", "experiments/**"]
 
 [tool.ruff.lint]

@@ -30,7 +30,12 @@ def get_optimizer(config, model):
         lr = config.params.learning_rate
 
     if config.name == "adamw":
-        tx = optax.adamw(lr, b1=config.params.b1, b2=config.params.b2, weight_decay=config.params.weight_decay)
+        tx = optax.adamw(
+            lr,
+            b1=config.params.b1,
+            b2=config.params.b2,
+            weight_decay=config.params.weight_decay,
+        )
     elif config.name == "radam":
         tx = optax.radam(lr)
     else:

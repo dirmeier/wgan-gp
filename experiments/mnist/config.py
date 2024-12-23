@@ -51,7 +51,6 @@ def get_config():
             do_gradient_clipping=True,
             gradient_clipping=1.0,
         ),
-
     )
 
     return config

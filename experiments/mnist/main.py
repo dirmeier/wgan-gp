@@ -73,11 +73,15 @@ def train(
     step_key, rng_key = jr.split(rng_key)
     for step, batch in zip(range(1, config.training.n_steps + 1), train_iter):
         train_key, val_key, sample_key = jr.split(jr.fold_in(step_key, step), 3)
-        pimages, plabels = jax.device_put((batch["image"], batch["label"]), data_sharding)
+        pimages, plabels = jax.device_put(
+            (batch["image"], batch["label"]), data_sharding
+        )
         if step == 1:
             logging.info(f"shape flat: {batch['image'].shape}")
             logging.info(f"shape sharded: {pimages.shape}")
-        do_generator_update = step % config.training.n_update_generator == 0 or step == 1
+        do_generator_update = (
+            step % config.training.n_update_generator == 0 or step == 1
+        )
         pstep_fn(
             train_key,
             (generator_fn, critic_fn),
@@ -101,7 +105,9 @@ def train(
             for val_idx, batch in zip(
                 range(config.training.n_eval_batches), val_iter
             ):
-                pimages, plabels = jax.device_put((batch["image"], batch["label"]), data_sharding)
+                pimages, plabels = jax.device_put(
+                    (batch["image"], batch["label"]), data_sharding
+                )
                 peval_fn(
                     jr.fold_in(val_key, val_idx),
                     (generator_fn, critic_fn),
@@ -201,7 +207,8 @@ def log_images(rng_key, generator_fn, step, model_id):
 
     for dpi in [200]:
         pt = os.path.join(FLAGS.workdir, "figures")
-        if not os.path.exists(pt): os.mkdir(pt)
+        if not os.path.exists(pt):
+            os.mkdir(pt)
         fl = os.path.join(pt, f"{model_id}-sampled-{step}-dpi-{dpi}.png")
         fig.savefig(fl, dpi=dpi)
 

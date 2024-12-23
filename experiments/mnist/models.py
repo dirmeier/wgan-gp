@@ -6,14 +6,16 @@ from jax import random as jr
 
 def _downsample(inputs):
     n, h, w, c = inputs.shape
-    return jax.image.resize(inputs, shape=(n, h // 2, w // 2, c),
-                            method="bilinear")
+    return jax.image.resize(
+        inputs, shape=(n, h // 2, w // 2, c), method="bilinear"
+    )
 
 
 def _upsample(inputs):
     n, h, w, c = inputs.shape
-    return jax.image.resize(inputs, shape=(n, h * 2, w * 2, c),
-                            method="bilinear")
+    return jax.image.resize(
+        inputs, shape=(n, h * 2, w * 2, c), method="bilinear"
+    )
 
 
 def _up_conv_block(dchan, rngs):
@@ -23,7 +25,7 @@ def _up_conv_block(dchan, rngs):
         strides=(1, 1),
         kernel_init=nnx.initializers.normal(0.02),
         padding="SAME",
-        rngs=rngs
+        rngs=rngs,
     )
 
     return nnx.Sequential(
@@ -55,8 +57,9 @@ def _to_rgb(shape, dchan, rngs):
             strides=(1, 1),
             kernel_init=nnx.initializers.normal(0.02),
             padding="SAME",
-            rngs=rngs),
-        nnx.tanh
+            rngs=rngs,
+        ),
+        nnx.tanh,
     )
 
 
@@ -69,7 +72,7 @@ class Generator(nnx.Module):
             _up_conv_block(dchan, rngs),
             _up_conv_block(dchan, rngs),
             _up_conv_block(dchan, rngs),
-            _to_rgb(shape, dchan, rngs)
+            _to_rgb(shape, dchan, rngs),
         )
 
     def __call__(self, sample_shape=(), context=None, **kwargs):
@@ -92,7 +95,7 @@ def _down_conv_block(dchan, rngs):
         strides=(1, 1),
         kernel_init=nnx.initializers.normal(0.02),
         padding="SAME",
-        rngs=rngs
+        rngs=rngs,
     )
 
     return nnx.Sequential(
@@ -105,15 +108,15 @@ def _down_conv_block(dchan, rngs):
 
 def _from_rgb(shape, dchan, rngs):
     return nnx.Sequential(
-            nnx.Conv(
-                in_features=shape[-1],
-                out_features=dchan,
-                kernel_size=(1, 1),
-                strides=(1, 1),
-                padding="SAME",
-                rngs=rngs
-            ),
-            nnx.tanh,
+        nnx.Conv(
+            in_features=shape[-1],
+            out_features=dchan,
+            kernel_size=(1, 1),
+            strides=(1, 1),
+            padding="SAME",
+            rngs=rngs,
+        ),
+        nnx.tanh,
     )
 
 
@@ -121,7 +124,7 @@ def _to_flat(dchan, base_resolution, rngs):
     n_in_features = dchan * base_resolution[0] * base_resolution[1]
     return nnx.Sequential(
         lambda x: x.reshape(x.shape[0], -1),
-        nnx.Linear(n_in_features, 1, rngs=rngs)
+        nnx.Linear(n_in_features, 1, rngs=rngs),
     )
 
 
@@ -130,10 +133,10 @@ class Critic(nnx.Module):
         self.rngs = rngs
         self.dlatent = dlatent
         self.model = nnx.Sequential(
-            _from_rgb(shape, dchan , rngs),
+            _from_rgb(shape, dchan, rngs),
             _down_conv_block(dchan, rngs),
             _down_conv_block(dchan, rngs),
-            _down_conv_block(dchan , rngs),
+            _down_conv_block(dchan, rngs),
             _to_flat(dchan, base_resolution, rngs),
         )
 
@@ -144,6 +147,8 @@ class Critic(nnx.Module):
 
 def make_model(shape, config, rng_key):
     return (
-        Generator(shape=shape, rngs=nnx.Rngs(rng_key, noise=rng_key+1), **config),
+        Generator(
+            shape=shape, rngs=nnx.Rngs(rng_key, noise=rng_key + 1), **config
+        ),
         Critic(shape=shape, rngs=nnx.Rngs(rng_key + 2), **config),
     )
