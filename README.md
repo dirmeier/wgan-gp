@@ -1,9 +1,6 @@
 # WGAN-GP
 
-[![status](http://www.repostatus.org/badges/latest/concept.svg)](http://www.repostatus.org/#concept)
 [![ci](https://github.com/dirmeier/wgan-gp/actions/workflows/ci.yaml/badge.svg)](https://github.com/dirmeier/wgan/actions/workflows/ci.yaml)
-
-> A Wasserstein GAN with gradient penalty in Flax/NNX
 
 ## About
 
@@ -13,7 +10,21 @@ The implementations are in JAX and Flax/NNX.
 ## Example usage
 
 An experiment where we train a WGAN-GP on MNIST can be found in [`experiments/mnist/`](experiments/mnist/).
-The hyperparameters can be found in [`experiments/mnist/config.py`](experiments/mnist/config.py).
+To run the example, first download the latest release and install all dependencies via:
+
+```bash
+wget -qO- https://github.com/dirmeier/wgan-gp/archive/refs/tags/<TAG>.tar.gz | tar zxvf -
+uv sync --all-groups
+```
+
+To train a model and make visualizations, call:
+
+```bash
+cd experiments/eight_gaussians_two_moons
+python main.py
+```
+
+Below are the results from training the GN using the hyperparameters defined in [`experiments/mnist/config.py`](experiments/mnist/config.py).
 A sample after training 20k steps (i.e., gradient steps) is shown below.
 
 <div align="center">
@@ -26,9 +37,9 @@ To install the latest GitHub <RELEASE>, just call the following on the
 command line:
 
 ```bash
-pip install git+https://github.com/dirmeier/wgan@<RELEASE>
+pip install git+https://github.com/dirmeier/wgan@<TAG>
 ```
 
 ## Author
 
-Simon Dirmeier <a href="mailto:sfyrbnd @ pm me">sfyrbnd @ pm me</a>
+Simon Dirmeier <a href="mailto:simd23@pm.me">simd23 @ pm dot me</a>
